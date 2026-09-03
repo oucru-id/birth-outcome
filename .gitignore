@@ -1,0 +1,38 @@
+# Credentials and local connection settings
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*service-account*.json
+*service_account*.json
+*credentials*.json
+.gcloud/
+
+# Patient-level exports and local diagnostics
+data/
+exports/
+results/
+screenshots/
+upload/
+*.csv
+*.tsv
+*.parquet
+*.xlsx
+*.xls
+*.sqlite
+*.db
+
+# Temporary files and generated QA artifacts
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+.DS_Store
+Thumbs.db
+~$*.docx
+*.tmp
+*.log
+rendered/
+qa/

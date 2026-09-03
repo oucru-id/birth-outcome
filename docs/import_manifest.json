@@ -1,0 +1,131 @@
+{
+  "description": "Exact imported SQL and approved Word document; no query-result exports. Checksums refer to imported file bytes.",
+  "source_scope": "Current supplied Source Preparation, Independent Core and Geography Patch packages; not a live BigQuery export.",
+  "files": [
+    {
+      "path": "sql/setup/01_source_adapter_views.sql",
+      "source_package_path": "Lombok_Barat_v3_Source_Preparation_Draft/draft_sql/01_source_adapter_views.sql",
+      "sha256": "fabc57cbc15bb3d6c6c24618021c8d053075161f6d0a7eb92738f2c6d0c60dd9"
+    },
+    {
+      "path": "sql/setup/02_reference.sql",
+      "source_package_path": "Lombok_Barat_v3_Source_Preparation_Draft/draft_sql/02_reference.sql",
+      "sha256": "f50af9dc2516a8d399c80dc6bd0068bd9354cb9701efdb60164f80597aa88e1d"
+    },
+    {
+      "path": "sql/setup/01_seed_location_reference.sql",
+      "source_package_path": "Lombok_Barat_v3_Geography_Patch/sql/01_seed_location_reference.sql",
+      "sha256": "ba6dfd22d12c4c103933fa8eccc9e9dc453d563f8ec6f512e37cc901e09bce8d"
+    },
+    {
+      "path": "sql/source_preparation/03_sigizi_source.sql",
+      "source_package_path": "Lombok_Barat_v3_Source_Preparation_Draft/draft_sql/03_sigizi_source.sql",
+      "sha256": "e7fddf8f2c71a3f4639884ec0d17a9ef7a39a767ca20f2de01b86350d4af05ca"
+    },
+    {
+      "path": "sql/source_preparation/04_epus_source.sql",
+      "source_package_path": "Lombok_Barat_v3_Source_Preparation_Draft/draft_sql/04_epus_source.sql",
+      "sha256": "ae26920464309de9062746de4d3be0863c8545aacc398ddc501a835cbfb281eb"
+    },
+    {
+      "path": "sql/source_preparation/05_epus_mother.sql",
+      "source_package_path": "Lombok_Barat_v3_Source_Preparation_Draft/draft_sql/05_epus_mother.sql",
+      "sha256": "9bc7897b4af4ab25f2b0034b651cb62965f27bc939aa19f636b922ba787077d5"
+    },
+    {
+      "path": "sql/source_preparation/06_epus_pregnancy_records.sql",
+      "source_package_path": "Lombok_Barat_v3_Source_Preparation_Draft/draft_sql/06_epus_pregnancy_records.sql",
+      "sha256": "8c6578f1ede25492da004f43d6a89bd26c6793967bb039ebb87c6a3e53169a73"
+    },
+    {
+      "path": "sql/source_preparation/07_epus_anc_events.sql",
+      "source_package_path": "Lombok_Barat_v3_Source_Preparation_Draft/draft_sql/07_epus_anc_events.sql",
+      "sha256": "0e192b13ff4affdcd41e57d283bf28a594b8ef90bb74bf77677fe1c4c3764085"
+    },
+    {
+      "path": "sql/source_preparation/08_epus_master.sql",
+      "source_package_path": "Lombok_Barat_v3_Source_Preparation_Draft/draft_sql/08_epus_master.sql",
+      "sha256": "8412d418007c3552d66675b02dffb94cf305cc298e2f8a746c6a8e85bf23b57f"
+    },
+    {
+      "path": "sql/source_preparation/03a_sigizi_geography.sql",
+      "source_package_path": "Lombok_Barat_v3_Geography_Patch/sql/03a_sigizi_geography.sql",
+      "sha256": "20eef1374eeed6656187a568f3089ac978eb2480d35a69fa83c67485dbb3d984"
+    },
+    {
+      "path": "sql/core/10_sigizi_episodes.sql",
+      "source_package_path": "Lombok_Barat_v3_Independent_Core/sql/10_sigizi_episodes.sql",
+      "sha256": "e8cec981f9750261d6e61d2c1a15008979e60ba04d9f0be6f8d9d59fb0150c5f"
+    },
+    {
+      "path": "sql/core/11_epus_adapter.sql",
+      "source_package_path": "Lombok_Barat_v3_Independent_Core/sql/11_epus_adapter.sql",
+      "sha256": "be4372d3c8301f1930dbc49f49f67ae5a04b0aaf9c7a1934c8c8cec98131482c"
+    },
+    {
+      "path": "sql/core/20_pregnancy_canonicalization.sql",
+      "source_package_path": "Lombok_Barat_v3_Independent_Core/sql/20_pregnancy_canonicalization.sql",
+      "sha256": "e059e506f4455db9f32dfd0706a5b02cef524db18ee454276369775b3b6f3b6f"
+    },
+    {
+      "path": "sql/core/30_usg_and_outcome_evidence.sql",
+      "source_package_path": "Lombok_Barat_v3_Independent_Core/sql/30_usg_and_outcome_evidence.sql",
+      "sha256": "7e9d5c9bdabda5b900c0e0a6d76152d07d685bff16b0c881ae6a3cb0ded92f46"
+    },
+    {
+      "path": "sql/core/40_outcome_tracking.sql",
+      "source_package_path": "Lombok_Barat_v3_Independent_Core/sql/40_outcome_tracking.sql",
+      "sha256": "31cc4dd12dcb3afe6dbd2ff48f8827dc1e91471275046f98cbb91a4bc5daf0dc"
+    },
+    {
+      "path": "sql/core/50_delivery_canonicalization.sql",
+      "source_package_path": "Lombok_Barat_v3_Independent_Core/sql/50_delivery_canonicalization.sql",
+      "sha256": "ca543856b4fb844b931ea80e77c401abab9199fde0cc6f92546a5ed4ffa12d5c"
+    },
+    {
+      "path": "sql/core/60_source_first_report.sql",
+      "source_package_path": "Lombok_Barat_v3_Independent_Core/sql/60_source_first_report.sql",
+      "sha256": "21072b695389dbf81e9534f0f08e444fab669c2438b1aa470ddaa2d189919181"
+    },
+    {
+      "path": "sql/reporting/70_reporting_views.sql",
+      "source_package_path": "Lombok_Barat_v3_Independent_Core/sql/70_reporting_views.sql",
+      "sha256": "6462b99b0d513b4056544983b3a10ab4052f61cffee4bc9ef68d3cd96c092dd0"
+    },
+    {
+      "path": "validation/80_core_checks.sql",
+      "source_package_path": "Lombok_Barat_v3_Independent_Core/sql/80_core_checks.sql",
+      "sha256": "19890d1aab48ebfc0cae6e970acb9938b0b9cc30567a32168124c93685d3acf3"
+    },
+    {
+      "path": "validation/81_reporting_schema_and_dependencies.sql",
+      "source_package_path": "Lombok_Barat_v3_Independent_Core/sql/81_reporting_schema_and_dependencies.sql",
+      "sha256": "6c0969d0f7a423a0f0a0276542948b7eded749c45409016b94e4c667c941e88f"
+    },
+    {
+      "path": "validation/82_dashboard_comparison.sql",
+      "source_package_path": "Lombok_Barat_v3_Independent_Core/sql/82_dashboard_comparison.sql",
+      "sha256": "a028802da678f6dd4b8df88970d3b391a5c465bf28d6a43b1125ebd01b65149d"
+    },
+    {
+      "path": "validation/90_geography_checks.sql",
+      "source_package_path": "Lombok_Barat_v3_Geography_Patch/sql/90_geography_checks.sql",
+      "sha256": "42b67e4a5ed31a1b16f856f41e996b8ea8e31448594c179daac0490b3d4724ba"
+    },
+    {
+      "path": "migrations/independent_20260903/00_capture_baseline.sql",
+      "source_package_path": "Lombok_Barat_v3_Independent_Core/sql/00_capture_baseline.sql",
+      "sha256": "e2ce51a5cfb3b3af248cf3202c4227911902830c7e94cd2dc5b47198f21eb331"
+    },
+    {
+      "path": "migrations/geography_20260903/00_capture_geography_baseline.sql",
+      "source_package_path": "Lombok_Barat_v3_Geography_Patch/sql/00_capture_geography_baseline.sql",
+      "sha256": "8e19b19254c497323376bcec29d5149df6071739e71c48247ca877587aabf29c"
+    },
+    {
+      "path": "docs/Lombok_Barat_v3_Data_Flow_and_Matching.docx",
+      "source_package_path": "Lombok_Barat_v3_Data_Flow_and_Matching.docx",
+      "sha256": "78bc0a2212f220c6df2ea48ba4e2b096bf5c1b5e3dab6f3ed2a0137a15d0b6b1"
+    }
+  ]
+}
