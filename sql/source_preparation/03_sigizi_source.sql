@@ -1,4 +1,6 @@
--- Recovered source builder; v3 target. Run the complete file.
+-- v3 source builder with pregnancy-specific deletion exclusion. Run the complete file.
+-- Prerequisite: sql/setup/01a_sigizi_deleted_registry.sql.
+-- Follow immediately with 03a_sigizi_geography.sql before downstream core builds.
 -- ============================================================
 -- STEP 1
 -- STANDARDIZE THE 5 CLEANED SIGIZI VIEWS
@@ -14,14 +16,7 @@
 --   It consumes the cleaned fields already produced by each view.
 -- ============================================================
 
-CREATE OR REPLACE TABLE
-  `spheres-lombok-barat.kohort_bumil_v3.t_sigizi_source_records`
-
-CLUSTER BY
-  source_table,
-  nik_clean
-
-AS
+CREATE TEMP TABLE sigizi_source_unfiltered AS
 
 WITH source_union AS (
 
@@ -907,3 +902,137 @@ SELECT
   source_json
 
 FROM normalized;
+
+-- BEGIN DELETION MATCH FUNCTIONS (also exercised by the regression tests).
+-- Match-only normalization; do not change the published nama/nama_norm fields.
+CREATE TEMP FUNCTION deletion_name_key(value STRING) AS (
+  NULLIF(TRIM(REGEXP_REPLACE(
+    REGEXP_REPLACE(NORMALIZE_AND_CASEFOLD(COALESCE(value, '')),
+      r'[^a-z0-9 ]', ' '), r'\s+', ' ')), '')
+);
+
+CREATE TEMP FUNCTION deletion_match_rule(
+  s_nik STRING, s_name STRING, s_dob DATE, s_anchor DATE,
+  d_nik STRING, d_name STRING, d_dob DATE, d_anchor DATE
+) RETURNS STRING AS (
+  CASE
+    WHEN s_anchor IS NULL OR d_anchor IS NULL OR s_anchor != d_anchor
+      THEN NULL
+    WHEN s_nik IS NOT NULL AND d_nik IS NOT NULL AND s_nik = d_nik
+      THEN 'NIK_AND_PREGNANCY_ANCHOR'
+    WHEN (s_nik IS NULL OR d_nik IS NULL)
+      AND s_name IS NOT NULL AND d_name IS NOT NULL AND s_name = d_name
+      AND s_dob IS NOT NULL AND d_dob IS NOT NULL AND s_dob = d_dob
+      THEN 'NAME_DOB_AND_PREGNANCY_ANCHOR'
+    ELSE NULL
+  END
+);
+-- END DELETION MATCH FUNCTIONS
+
+-- Read the deletion registry once. A missing/inaccessible view stops this build;
+-- it must never silently disable exclusions. Raw registry retention is required.
+CREATE TEMP TABLE sigizi_deletion_registry AS
+SELECT
+  d.*,
+  deletion_name_key(COALESCE(NULLIF(nama_norm, ''), nama)) AS deletion_name_norm
+FROM `spheres-lombok-barat.kohort_bumil_v3.vs_sigizi_bumil_hapus` AS d;
+
+CREATE TEMP TABLE sigizi_deletion_features AS
+SELECT
+  ROW_NUMBER() OVER () AS source_row_instance,
+  s AS source_record,
+  COALESCE(hpht_date, DATE_SUB(hpl_date, INTERVAL 280 DAY))
+    AS deletion_pregnancy_anchor_date,
+  CASE WHEN hpht_date IS NOT NULL THEN 'HPHT'
+       WHEN hpl_date IS NOT NULL THEN 'HPL_MINUS_280_DAYS'
+       ELSE 'NO_PREGNANCY_ANCHOR' END AS deletion_anchor_method,
+  deletion_name_key(COALESCE(NULLIF(nama_norm, ''), nama)) AS deletion_name_norm
+FROM sigizi_source_unfiltered AS s;
+
+-- An array preserves all matching registry references without multiplying rows.
+-- Deletions are applied across the five SIGIZI clinical sources only.
+CREATE TEMP TABLE sigizi_deletion_matches AS
+SELECT
+  s.source_row_instance,
+  ARRAY_AGG(STRUCT(
+      d.source_record_id AS registry_source_record_id,
+      d.deleted_sigizi_pregnancy_key,
+      d.hpht_date AS registry_hpht_date,
+      d.tanggal_hapus_date,
+      deletion_match_rule(
+        s.source_record.nik_clean, s.deletion_name_norm,
+        s.source_record.tanggal_lahir, s.deletion_pregnancy_anchor_date,
+        d.nik_clean, d.deletion_name_norm, d.tanggal_lahir, d.hpht_date
+      ) AS exclusion_match_rule
+    ) ORDER BY d.deleted_sigizi_pregnancy_key, d.source_record_id
+  ) AS deletion_matches
+FROM sigizi_deletion_features AS s
+JOIN sigizi_deletion_registry AS d
+  ON s.deletion_pregnancy_anchor_date = d.hpht_date
+  AND deletion_match_rule(
+      s.source_record.nik_clean, s.deletion_name_norm,
+      s.source_record.tanggal_lahir, s.deletion_pregnancy_anchor_date,
+      d.nik_clean, d.deletion_name_norm, d.tanggal_lahir, d.hpht_date
+    ) IS NOT NULL
+GROUP BY s.source_row_instance;
+
+CREATE TEMP TABLE sigizi_deletion_decisions AS
+SELECT s.*, IFNULL(m.deletion_matches, []) AS deletion_matches
+FROM sigizi_deletion_features AS s
+LEFT JOIN sigizi_deletion_matches AS m USING (source_row_instance);
+
+CREATE TEMP TABLE sigizi_deletion_run AS
+SELECT
+  GENERATE_UUID() AS exclusion_run_id,
+  CURRENT_TIMESTAMP() AS exclusion_refreshed_at,
+  'SIGIZI_PREGNANCY_DELETION_V1' AS exclusion_rule_version,
+  (SELECT COUNT(*) FROM sigizi_deletion_registry) AS registry_rows,
+  (SELECT COUNTIF(hpht_date IS NULL) FROM sigizi_deletion_registry)
+    AS registry_rows_without_hpht,
+  (SELECT COUNTIF(hpht_date IS NOT NULL AND nik_clean IS NULL
+      AND (deletion_name_norm IS NULL OR tanggal_lahir IS NULL))
+    FROM sigizi_deletion_registry) AS registry_rows_without_usable_identity,
+  (SELECT COUNT(*) FROM sigizi_source_unfiltered) AS source_rows_before_exclusion,
+  COUNTIF(ARRAY_LENGTH(deletion_matches) > 0) AS excluded_source_rows,
+  COUNTIF(ARRAY_LENGTH(deletion_matches) = 0) AS active_source_rows,
+  COUNTIF(deletion_pregnancy_anchor_date IS NULL) AS source_rows_without_anchor
+FROM sigizi_deletion_decisions;
+
+ASSERT (SELECT source_rows_before_exclusion = excluded_source_rows + active_source_rows
+  FROM sigizi_deletion_run) AS 'Deletion gate changed source row multiplicity';
+
+ASSERT NOT EXISTS (
+  SELECT 1 FROM sigizi_source_unfiltered WHERE source_table = 'BUMIL_HAPUS'
+) AS 'The deletion registry must not be a clinical source';
+
+-- Latest-build audit, NOT an append-only history. Raw data are never deleted.
+-- Contains sensitive source data; keep it inside the approved BigQuery dataset.
+CREATE OR REPLACE TABLE
+  `spheres-lombok-barat.kohort_bumil_v3.t_sigizi_deletion_exclusion_audit`
+CLUSTER BY source_table, nik_clean AS
+SELECT
+  d.source_record.*,
+  d.deletion_pregnancy_anchor_date,
+  d.deletion_anchor_method,
+  d.deletion_matches,
+  r.exclusion_run_id,
+  r.exclusion_refreshed_at,
+  r.exclusion_rule_version
+FROM sigizi_deletion_decisions AS d
+CROSS JOIN sigizi_deletion_run AS r
+WHERE ARRAY_LENGTH(d.deletion_matches) > 0;
+
+-- Preserve the complete original public schema: no helper/audit columns leak.
+CREATE OR REPLACE TABLE
+  `spheres-lombok-barat.kohort_bumil_v3.t_sigizi_source_records`
+CLUSTER BY source_table, nik_clean AS
+SELECT source_record.*
+FROM sigizi_deletion_decisions
+WHERE ARRAY_LENGTH(deletion_matches) = 0;
+
+-- Published last. A failed multi-statement job must block downstream execution.
+CREATE OR REPLACE TABLE
+  `spheres-lombok-barat.kohort_bumil_v3.t_sigizi_deletion_exclusion_summary`
+AS SELECT * FROM sigizi_deletion_run;
+
+SELECT * FROM `spheres-lombok-barat.kohort_bumil_v3.t_sigizi_deletion_exclusion_summary`;

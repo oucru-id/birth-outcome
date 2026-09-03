@@ -1,0 +1,41 @@
+digraph pipeline {
+graph [rankdir=TB, bgcolor="white", fontname="DejaVu Sans", fontsize=14,
+       nodesep=0.26, ranksep=0.40, pad=0.14, compound=true, newrank=true];
+node [shape=box, fontname="DejaVu Sans", fontsize=11, color="#60768A",
+      penwidth=0.8, margin="0.14,0.09"];
+edge [fontname="DejaVu Sans", fontsize=9, color="#60768A", arrowsize=0.7];
+sp [label="t_pregnancy_episode_spine_v3_3", fillcolor="#E8F2EE", style="rounded,filled"];
+oe [label="t_pregnancy_outcome_events_v3_3", fillcolor="#E8F2EE", style="rounded,filled"];
+usg [label="t_pregnancy_usg_dating_v3_3", fillcolor="#E8F2EE", style="rounded,filled"];
+anc [label="vs_epus_anc\nUSG observations", fillcolor="#E8EFF8", style="rounded,filled"];
+tracking [label="t_pregnancy_outcome_tracking_v3_3", fillcolor="#E8F2EE", style="rounded,filled"];
+ds [label="t_delivery_source_records", fillcolor="#E8F2EE", style="rounded,filled"];
+db [label="t_delivery_dedup_base", fillcolor="#E8F2EE", style="rounded,filled"];
+du [label="t_delivery_event_master_unlinked", fillcolor="#E8F2EE", style="rounded,filled"];
+match [label="Delivery-to-pregnancy matching\nTiming, ambiguity and collision\nchecks", fillcolor="#FFF2DF", style="rounded,filled"];
+dm [label="t_delivery_event_master_v3", fillcolor="#E8F2EE", style="rounded,filled"];
+valid [label="v_delivery_event_master_validated", fillcolor="#E8EFF8", style="rounded,filled"];
+pi [label="v_pregnancy_monitoring_integrated", fillcolor="#E8EFF8", style="rounded,filled"];
+scope [label="v_pregnancy_monitoring_by_source_\nscope", fillcolor="#E8EFF8", style="rounded,filled"];
+di [label="v_delivery_monitoring_integrated", fillcolor="#E8EFF8", style="rounded,filled"];
+pl [label="Looker | pregnancy monitoring", fillcolor="#DCEBF5", style="rounded,filled"];
+dl [label="Looker | delivery and ANC linkage", fillcolor="#DCEBF5", style="rounded,filled"];
+sp -> usg;
+anc -> usg;
+sp -> tracking;
+usg -> tracking;
+oe -> tracking;
+oe -> ds;
+ds -> db;
+db -> du;
+du -> match;
+sp -> match;
+match -> dm;
+dm -> valid;
+tracking -> pi;
+valid -> pi;
+valid -> di;
+pi -> scope;
+scope -> pl;
+di -> dl;
+}

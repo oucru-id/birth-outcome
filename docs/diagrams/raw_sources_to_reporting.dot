@@ -1,0 +1,94 @@
+digraph pipeline {
+graph [rankdir=TB, bgcolor="white", fontname="DejaVu Sans", fontsize=14,
+       nodesep=0.26, ranksep=0.40, pad=0.14, compound=true, newrank=true];
+node [shape=box, fontname="DejaVu Sans", fontsize=11, color="#60768A",
+      penwidth=0.8, margin="0.14,0.09"];
+edge [fontname="DejaVu Sans", fontsize=9, color="#60768A", arrowsize=0.7];
+subgraph cluster_sigizi { label="SIGIZI | pregnancy and outcome\nrecords"; color="#388E73"; penwidth=1.5; style="rounded"; bgcolor="#FAFCFE";
+sr [label="raw_data\nsigizi_kesga_bumil_anc\nsigizi_daftar_ibu\nsigizi_daftar_ibu_hamil\nsigizi_kohort_ibu\nsigizi_ibu_nifas", fillcolor="#F1F3F5", style="rounded,filled"];
+sv [label="vs_sigizi_anc\nvs_sigizi_daftar_ibu\nvs_sigizi_daftar_ibu_hamil\nvs_sigizi_kohort_ibu\nvs_sigizi_kohort_nifas", fillcolor="#E8EFF8", style="rounded,filled"];
+dr [label="raw_data\nsigizi_bumil_hapus_new", fillcolor="#F1F3F5", style="rounded,filled"];
+dv [label="vs_sigizi_bumil_hapus\nDeletion registry", fillcolor="#E8EFF8", style="rounded,filled"];
+gate [label="03_sigizi_source.sql\nExclude matching deleted\npregnancies", fillcolor="#FFF2DF", style="rounded,filled"];
+ss [label="t_sigizi_source_records\nActive SIGIZI records", fillcolor="#E8F2EE", style="rounded,filled"];
+geo [label="03a_sigizi_geography.sql\nCorrect geography in the same\nsource table", fillcolor="#FFF2DF", style="rounded,filled"];
+sr -> sv;
+sv -> gate;
+dr -> dv;
+dv -> gate [label="exclusion reference"];
+gate -> ss;
+ss -> geo;
+}
+subgraph cluster_epus { label="EPUS | visits, pregnancy and\ndelivery"; color="#397BB6"; penwidth=1.5; style="rounded"; bgcolor="#FAFCFE";
+er [label="raw_data\nepus_anc\nepus_inc\nepus_pnc\nepus_kunjungan_ibu_hamil", fillcolor="#F1F3F5", style="rounded,filled"];
+ev [label="vs_epus_anc\nvs_epus_inc\nvs_epus_pnc\nvs_kohort_epus_kunjungan_ibu_hamil", fillcolor="#E8EFF8", style="rounded,filled"];
+es [label="t_epus_source_records", fillcolor="#E8F2EE", style="rounded,filled"];
+eprep [label="Mother identity, pregnancy\nassignment and ANC deduplication", fillcolor="#FFF2DF", style="rounded,filled"];
+em [label="t_epus_pregnancy_master", fillcolor="#E8F2EE", style="rounded,filled"];
+er -> ev;
+ev -> es;
+es -> eprep;
+eprep -> em;
+ev -> em [label="INC evidence"];
+}
+subgraph cluster_simrs { label="SIMRS | hospital births"; color="#7B69AE"; penwidth=1.5; style="rounded"; bgcolor="#FAFCFE";
+mr [label="raw_data.simrs_patut_patuh_inc", fillcolor="#F1F3F5", style="rounded,filled"];
+mv [label="vs_simrs_patut_patuh_inc", fillcolor="#E8EFF8", style="rounded,filled"];
+mr -> mv;
+}
+subgraph cluster_kobo { label="Kobo | INC and neonatal outcomes"; color="#C08C31"; penwidth=1.5; style="rounded"; bgcolor="#FAFCFE";
+kraw [label="data_kobo_form\ne-form_pencatatan_pelayanan_\nintranatal_care\nneonatus_outcome_v2\n\ndata_adjudication.adj_final", fillcolor="#F1F3F5", style="rounded,filled"];
+kviews [label="vs_kobo_inc_submission_clean\nvs_kobo_inc_case_master\nvs_kobo_neonatus_outcome_v2_baby", fillcolor="#E8EFF8", style="rounded,filled"];
+kraw -> kviews [label="see Kobo detail"];
+}
+subgraph cluster_facility { label="Facility birth reports | external"; color="#B4697E"; penwidth=1.5; style="rounded"; bgcolor="#FAFCFE";
+fr [label="Facility birth reporting\nRaw ingestion / tracker build not\ndefined in this repository", fillcolor="#F8EDF0", style="rounded,filled,dashed"];
+fv [label="birth_report_faskes.v_inc_report_\ntracker", fillcolor="#E8EFF8", style="rounded,filled"];
+fr -> fv [label="external boundary", style="dashed"];
+}
+episodes [label="SIGIZI episodes + EPUS episode\nadapter\nWithin-source and cross-source\ncanonicalization", fillcolor="#FFF2DF", style="rounded,filled"];
+sp [label="t_pregnancy_episode_spine_v3_3", fillcolor="#E8F2EE", style="rounded,filled"];
+geo -> episodes;
+em -> episodes;
+episodes -> sp;
+oe [label="t_pregnancy_outcome_events_v3_3", fillcolor="#E8F2EE", style="rounded,filled"];
+geo -> oe;
+em -> oe;
+mv -> oe;
+kviews -> oe;
+fv -> oe;
+usg [label="t_pregnancy_usg_dating_v3_3", fillcolor="#E8F2EE", style="rounded,filled"];
+anc [label="vs_epus_anc\nUSG observations", fillcolor="#E8EFF8", style="rounded,filled"];
+tracking [label="t_pregnancy_outcome_tracking_v3_3", fillcolor="#E8F2EE", style="rounded,filled"];
+ds [label="t_delivery_source_records", fillcolor="#E8F2EE", style="rounded,filled"];
+db [label="t_delivery_dedup_base", fillcolor="#E8F2EE", style="rounded,filled"];
+du [label="t_delivery_event_master_unlinked", fillcolor="#E8F2EE", style="rounded,filled"];
+match [label="Delivery-to-pregnancy matching\nTiming, ambiguity and collision\nchecks", fillcolor="#FFF2DF", style="rounded,filled"];
+dm [label="t_delivery_event_master_v3", fillcolor="#E8F2EE", style="rounded,filled"];
+valid [label="v_delivery_event_master_validated", fillcolor="#E8EFF8", style="rounded,filled"];
+pi [label="v_pregnancy_monitoring_integrated", fillcolor="#E8EFF8", style="rounded,filled"];
+scope [label="v_pregnancy_monitoring_by_source_\nscope", fillcolor="#E8EFF8", style="rounded,filled"];
+di [label="v_delivery_monitoring_integrated", fillcolor="#E8EFF8", style="rounded,filled"];
+pl [label="Looker | pregnancy monitoring", fillcolor="#DCEBF5", style="rounded,filled"];
+dl [label="Looker | delivery and ANC linkage", fillcolor="#DCEBF5", style="rounded,filled"];
+sp -> usg;
+anc -> usg;
+sp -> tracking;
+usg -> tracking;
+oe -> tracking;
+oe -> ds;
+ds -> db;
+db -> du;
+du -> match;
+sp -> match;
+match -> dm;
+dm -> valid;
+tracking -> pi;
+valid -> pi;
+valid -> di;
+pi -> scope;
+scope -> pl;
+di -> dl;
+{rank=same; sr; er; mr; kraw; fr;}
+ev -> anc [label="ANC ultrasound evidence"];
+}

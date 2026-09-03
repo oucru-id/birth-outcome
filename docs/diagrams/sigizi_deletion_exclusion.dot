@@ -1,0 +1,21 @@
+digraph pipeline {
+graph [rankdir=TB, bgcolor="white", fontname="DejaVu Sans", fontsize=14,
+       nodesep=0.26, ranksep=0.40, pad=0.14, compound=true, newrank=true];
+node [shape=box, fontname="DejaVu Sans", fontsize=11, color="#60768A",
+      penwidth=0.8, margin="0.14,0.09"];
+edge [fontname="DejaVu Sans", fontsize=9, color="#60768A", arrowsize=0.7];
+clinical [label="SIGIZI clinical cleaning views", fillcolor="#E8EFF8", style="rounded,filled"];
+deleted_raw [label="raw_data.sigizi_bumil_hapus_new", fillcolor="#F1F3F5", style="rounded,filled"];
+deleted_view [label="vs_sigizi_bumil_hapus", fillcolor="#E8EFF8", style="rounded,filled"];
+check [label="03_sigizi_source.sql\nSame mother identity AND same\npregnancy anchor?", fillcolor="#FFF2DF", style="rounded,filled"];
+active [label="t_sigizi_source_records\nRetained clinical source records", fillcolor="#E8F2EE", style="rounded,filled"];
+audit [label="t_sigizi_deletion_exclusion_audit\nExcluded rows and matching\nreferences", fillcolor="#E8F2EE", style="rounded,filled"];
+next [label="03a geography correction\nThen pregnancy and outcome builders", fillcolor="#FFF2DF", style="rounded,filled"];
+deleted_raw -> deleted_view;
+deleted_view -> check;
+clinical -> check;
+check -> audit [label="match"];
+check -> active [label="no qualifying match"];
+active -> next;
+{rank=same; clinical; deleted_view;} {rank=same; active; audit;}
+}

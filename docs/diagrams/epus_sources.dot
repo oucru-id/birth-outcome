@@ -1,0 +1,19 @@
+digraph pipeline {
+graph [rankdir=TB, bgcolor="white", fontname="DejaVu Sans", fontsize=14,
+       nodesep=0.26, ranksep=0.40, pad=0.14, compound=true, newrank=true];
+node [shape=box, fontname="DejaVu Sans", fontsize=11, color="#60768A",
+      penwidth=0.8, margin="0.14,0.09"];
+edge [fontname="DejaVu Sans", fontsize=9, color="#60768A", arrowsize=0.7];
+subgraph cluster_epus { label="EPUS | visits, pregnancy and\ndelivery"; color="#397BB6"; penwidth=1.5; style="rounded"; bgcolor="#FAFCFE";
+er [label="raw_data\nepus_anc\nepus_inc\nepus_pnc\nepus_kunjungan_ibu_hamil", fillcolor="#F1F3F5", style="rounded,filled"];
+ev [label="vs_epus_anc\nvs_epus_inc\nvs_epus_pnc\nvs_kohort_epus_kunjungan_ibu_hamil", fillcolor="#E8EFF8", style="rounded,filled"];
+es [label="t_epus_source_records", fillcolor="#E8F2EE", style="rounded,filled"];
+eprep [label="Mother identity, pregnancy\nassignment and ANC deduplication", fillcolor="#FFF2DF", style="rounded,filled"];
+em [label="t_epus_pregnancy_master", fillcolor="#E8F2EE", style="rounded,filled"];
+er -> ev;
+ev -> es;
+es -> eprep;
+eprep -> em;
+ev -> em [label="INC evidence"];
+}
+}

@@ -1,0 +1,23 @@
+digraph pipeline {
+graph [rankdir=TB, bgcolor="white", fontname="DejaVu Sans", fontsize=14,
+       nodesep=0.26, ranksep=0.40, pad=0.14, compound=true, newrank=true];
+node [shape=box, fontname="DejaVu Sans", fontsize=11, color="#60768A",
+      penwidth=0.8, margin="0.14,0.09"];
+edge [fontname="DejaVu Sans", fontsize=9, color="#60768A", arrowsize=0.7];
+subgraph cluster_kobo { label="Kobo | INC cases and neonatal\noutcomes"; color="#C08C31"; penwidth=1.5; style="rounded"; bgcolor="#FAFCFE";
+kr [label="data_kobo_form\ne-form_pencatatan_pelayanan_\nintranatal_care", fillcolor="#F1F3F5", style="rounded,filled"];
+ka [label="data_adjudication.adj_final", fillcolor="#F1F3F5", style="rounded,filled"];
+kv [label="vs_kobo_inc_submission_clean", fillcolor="#E8EFF8", style="rounded,filled"];
+kc [label="vs_kobo_inc_case_master", fillcolor="#E8EFF8", style="rounded,filled"];
+kn [label="data_kobo_form.neonatus_outcome_v2", fillcolor="#F1F3F5", style="rounded,filled"];
+kb [label="vs_kobo_neonatus_outcome_v2_baby", fillcolor="#E8EFF8", style="rounded,filled"];
+kr -> kv;
+kv -> kc;
+ka -> kc;
+kn -> kb;
+}
+oe [label="t_pregnancy_outcome_events_v3_3", fillcolor="#E8F2EE", style="rounded,filled"];
+kc -> oe;
+kb -> oe;
+kr -> ka [style=invis]; ka -> kv [style=invis]; {rank=same; kr; kn;}
+}

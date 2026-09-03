@@ -1,0 +1,22 @@
+digraph pipeline {
+graph [rankdir=TB, bgcolor="white", fontname="DejaVu Sans", fontsize=14,
+       nodesep=0.26, ranksep=0.40, pad=0.14, compound=true, newrank=true];
+node [shape=box, fontname="DejaVu Sans", fontsize=11, color="#60768A",
+      penwidth=0.8, margin="0.14,0.09"];
+edge [fontname="DejaVu Sans", fontsize=9, color="#60768A", arrowsize=0.7];
+subgraph cluster_sigizi { label="SIGIZI | pregnancy and outcome\nrecords"; color="#388E73"; penwidth=1.5; style="rounded"; bgcolor="#FAFCFE";
+sr [label="raw_data\nsigizi_kesga_bumil_anc\nsigizi_daftar_ibu\nsigizi_daftar_ibu_hamil\nsigizi_kohort_ibu\nsigizi_ibu_nifas", fillcolor="#F1F3F5", style="rounded,filled"];
+sv [label="vs_sigizi_anc\nvs_sigizi_daftar_ibu\nvs_sigizi_daftar_ibu_hamil\nvs_sigizi_kohort_ibu\nvs_sigizi_kohort_nifas", fillcolor="#E8EFF8", style="rounded,filled"];
+dr [label="raw_data\nsigizi_bumil_hapus_new", fillcolor="#F1F3F5", style="rounded,filled"];
+dv [label="vs_sigizi_bumil_hapus\nDeletion registry", fillcolor="#E8EFF8", style="rounded,filled"];
+gate [label="03_sigizi_source.sql\nExclude matching deleted\npregnancies", fillcolor="#FFF2DF", style="rounded,filled"];
+ss [label="t_sigizi_source_records\nActive SIGIZI records", fillcolor="#E8F2EE", style="rounded,filled"];
+geo [label="03a_sigizi_geography.sql\nCorrect geography in the same\nsource table", fillcolor="#FFF2DF", style="rounded,filled"];
+sr -> sv;
+sv -> gate;
+dr -> dv;
+dv -> gate [label="exclusion reference"];
+gate -> ss;
+ss -> geo;
+}
+}

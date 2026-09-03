@@ -4,7 +4,7 @@
 
 These files target the existing `spheres-lombok-barat.kohort_bumil_v3` deployment in `asia-southeast2`. They retain the supplied SQL logic. The repository is not an empty-project bootstrap: raw inputs, datasets, permissions, reference data and the saved reporting contract must already be available or separately established.
 
-Imported SQL is preserved byte-for-byte, including historical header comments that may mention v2. Those comments are not executable dependencies. The current recurring builders address v3 preparation/core objects; the deliberate one-time location-reference seed still reads v2.
+The import manifest records the original recovered SQL. Reviewed changes after import include the SIGIZI deletion exclusion described in `migrations/sigizi_deletion/README.md`; changed files no longer have their original import checksums. Historical header comments may mention v2, but comments are not executable dependencies. The current recurring builders address v3 preparation/core objects; the deliberate one-time location-reference seed still reads v2.
 
 Uploading this repository does not configure or run any scheduled query. No automatic BigQuery deployment is enabled.
 
@@ -13,6 +13,7 @@ Uploading this repository does not configure or run any scheduled query. No auto
 | File | Purpose | Caution |
 |---|---|---|
 | `sql/setup/01_source_adapter_views.sql` | Create or replace source cleaning/adapter views | Requires original raw, Kobo and adjudication inputs |
+| `sql/setup/01a_sigizi_deleted_registry.sql` | Create the v3 SIGIZI pregnancy-deletion registry view | Requires `raw_data.sigizi_bumil_hapus_new`; deploy before the updated SIGIZI source builder |
 | `sql/setup/02_reference.sql` | Build the stepped-wedge reference from recovered inline definitions | Uses replacement semantics; do not overwrite maintained changes as a daily job |
 | `sql/setup/01_seed_location_reference.sql` | Seed the v3 location reference from the maintained v2 reference | One-time v2 dependency; preserves an existing v3 table; does not establish historical reference equivalence |
 | `sql/reporting/70_reporting_views.sql` | Deploy reporting views using saved explicit field projections | Requires the retained schema-contract table described below |
@@ -25,7 +26,7 @@ Run each file as a complete standalone query job. Wait for success before starti
 
 | Run order | File | Main role |
 |---|---|---|
-| First | `sql/source_preparation/03_sigizi_source.sql` | Rebuild SIGIZI source records |
+| First | `sql/source_preparation/03_sigizi_source.sql` | Rebuild SIGIZI source records, excluding matched deleted pregnancies and publishing the exclusion audit |
 | Immediately afterward | `sql/source_preparation/03a_sigizi_geography.sql` | Repair geography and publish the corrected source table |
 | Next | `sql/source_preparation/04_epus_source.sql` | Rebuild EPUS source records |
 | Next | `sql/source_preparation/05_epus_mother.sql` | Assign mother identities |
@@ -46,6 +47,14 @@ This sequential order is a conservative valid schedule. An orchestrator may para
 The operational `monitoring_start_date` is currently declared as `2025-12-01` in `40_outcome_tracking.sql`. It is a cohort rule, not the lower bound for every analysis. Review it separately from other source/reporting date windows.
 
 Views do not need daily recreation solely because their underlying tables were rebuilt. Redeploy view definitions deliberately when the SQL or reporting contract changes.
+
+## SIGIZI deletion dependency
+
+Refresh and retain the raw SIGIZI deletion registry before each SIGIZI source build. The `vs_sigizi_bumil_hapus` view is an exclusion reference, never an additional clinical source. The updated source builder matches a pregnancy by usable NIK plus exact HPHT, or by normalized name, birth date and exact HPHT when either NIK is unavailable. Source HPL minus the gestation interval is used only when source HPHT is absent. Conflicting usable NIKs do not fall back to names.
+
+This excludes matching SIGIZI records, not independent EPUS or hospital records, and not every pregnancy belonging to a mother. Missing dates or insufficient identity remain unresolved for review, rather than triggering broad exclusions. The audit and summary tables describe the latest build, not an immutable event history. Protect access as for the clinical source data.
+
+Run `validation/91_sigizi_deletion_checks.sql` after source preparation plus geography correction, and `validation/92_sigizi_deletion_downstream_checks.sql` after rebuilding the core. Replace the deployed scheduled text for `03_sigizi_source.sql`; creating the registry view by itself does not activate exclusions. Registry setup, audit and summary tables need no separate daily schedule.
 
 ## Geography dependency
 

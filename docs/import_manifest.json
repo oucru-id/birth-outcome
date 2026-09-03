@@ -1,5 +1,5 @@
 {
-  "description": "Exact imported SQL and approved Word document; no query-result exports. Checksums refer to imported file bytes.",
+  "description": "Original imported SQL/document checksums with reviewed documentation and SQL revisions recorded separately; no patient-result exports.",
   "source_scope": "Current supplied Source Preparation, Independent Core and Geography Patch packages; not a live BigQuery export.",
   "files": [
     {
@@ -126,6 +126,53 @@
       "path": "docs/Lombok_Barat_v3_Data_Flow_and_Matching.docx",
       "source_package_path": "Lombok_Barat_v3_Data_Flow_and_Matching.docx",
       "sha256": "78bc0a2212f220c6df2ea48ba4e2b096bf5c1b5e3dab6f3ed2a0137a15d0b6b1"
+    }
+  ],
+  "document_updates": [
+    {
+      "path": "docs/Lombok_Barat_v3_Data_Flow_and_Matching.docx",
+      "revision": "Grouped raw-source diagrams",
+      "sha256": "89acc9f79c4dc34be1f5e1cd349007a4868e343773c979982e72c88313091b6f",
+      "changes": "Start diagrams with separate SIGIZI, EPUS, SIMRS, Kobo and external facility-report groups. Retain detailed matching logic and existing appendix; move exact raw-to-view pairs to a dedicated appendix page. No SQL changes."
+    },
+    {
+      "path": "docs/Lombok_Barat_v3_Data_Flow_and_Matching.docx",
+      "revision": "SIGIZI deletion exclusion and scheduler replacement",
+      "sha256": "2dd8dff4324a9e746dbd47e888dd642292d563d2f995ae6a79443d2e8d0d6c1c",
+      "changes": "Add deletion registry to grouped raw-source diagrams, explain exact pregnancy-specific exclusion and unresolved cases, document latest-run audit, and replace existing scheduled builder in place. Retain simple summary, detailed logic and appendix; no population totals."
+    }
+  ],
+  "sql_updates": [
+    {
+      "revision": "SIGIZI_PREGNANCY_DELETION_V1",
+      "live_bigquery_execution_verified": false,
+      "changes": "Restore deletion reference and exclude matching clinical SIGIZI pregnancy records before geography/core builds. Keep public source projection unchanged. Add audit, reconciliation and synthetic regression checks.",
+      "files": [
+        {
+          "path": "sql/setup/01a_sigizi_deleted_registry.sql",
+          "sha256": "13cfc6c9780dd06ee204df763af868fea49e39c7acc34cee5bca3b8c1c0a400d"
+        },
+        {
+          "path": "sql/source_preparation/03_sigizi_source.sql",
+          "sha256": "580009e35546b829aac84c5489f098c10ddc7fc2b0f63bf9ea431a54118b752b"
+        },
+        {
+          "path": "validation/91_sigizi_deletion_checks.sql",
+          "sha256": "3149c5f21496021d0faca4e791d2a07c05f9b54a83b78395ffadd2ca723b46f9"
+        },
+        {
+          "path": "validation/92_sigizi_deletion_downstream_checks.sql",
+          "sha256": "d2d3a7256930592eb97785c58553643f8186cf529b1dec084d78ec4ac58c9469"
+        },
+        {
+          "path": "tests/test_sigizi_deletion.py",
+          "sha256": "f2a5c5994943c0794a8d72064caaa3b30e50ec08556a58841b1d356d41035f2d"
+        },
+        {
+          "path": "tests/91_sigizi_deletion_regression.sql",
+          "sha256": "122de080e28043adb31150c255cc8109ba2891a5e925d991c9efe87929000733"
+        }
+      ]
     }
   ]
 }
