@@ -1,0 +1,11 @@
+file,tables_created,external_kohort_dependencies_before_job
+01_PBG-01_sigizi_source_standardization.sql,1,
+02_PBG-02_sigizi_pregnancy_episodes.sql,1,
+03_PBG-03_epus_source_standardization.sql,1,
+04_PBG-04_epus_pregnancy_episodes.sql,1,
+05_PBG-05_canonical_pregnancy_FULL_v4_1_plus_v4_1_1_patch.sql,32,
+06_PBG-06_delivery_source_standardization.sql,1,
+07_PBG-07_delivery_dedup_canonical.sql,10,
+08_PBG-08_delivery_to_pregnancy_linkage.sql,2,
+09_PBG-09_post_anc_delivery_consolidation.sql,2,
+10_PBG-10_integrated_pregnancy_monitoring.sql,5,
