@@ -1,0 +1,12 @@
+order,stage,scheduled_query_file,schedule,depends_on,final_output
+1,PBG-01,01_PBG-01_sigizi_source_standardization.sql,YES,SIGIZI raw ingestion,t_sigizi_source_records
+2,PBG-02,02_PBG-02_sigizi_pregnancy_episodes.sql,YES,PBG-01,t_sigizi_pregnancy_episode_v3_3
+3,PBG-03,03_PBG-03_epus_source_standardization.sql,YES,ePUS raw ingestion,t_epus_source_records
+4,PBG-04,04_PBG-04_epus_pregnancy_episodes.sql,YES,PBG-03,t_epus_pregnancy_episode_adapter_v3_3
+5,PBG-05,05_PBG-05_canonical_pregnancy_FULL_v4_1_plus_v4_1_1_patch.sql,YES,PBG-02 + PBG-04,t_pregnancy_episode_spine_v3_3
+6,PBG-06,06_PBG-06_delivery_source_standardization.sql,YES,PBG-01 + PBG-03 + SIMRS/eKohort/Birth Confirmation raw ingestion,t_delivery_source_records_v3_3
+7,PBG-07,07_PBG-07_delivery_dedup_canonical.sql,YES,PBG-06,t_delivery_event_canonical_v3_3
+8,PBG-08,08_PBG-08_delivery_to_pregnancy_linkage.sql,YES,PBG-05 + PBG-07,t_delivery_pregnancy_link_v3_3
+9,PBG-09,09_PBG-09_post_anc_delivery_consolidation.sql,YES,PBG-08,t_delivery_event_canonical_post_anc_v3_3
+10,PBG-10,10_PBG-10_integrated_pregnancy_monitoring.sql,YES — DAILY,PBG-09,t_pregnancy_monitoring_integrated_v3_3
+11,QA,utilities/11_daily_QA_after_PBG-10.sql,YES / after PBG-10,PBG-10,QA result sets
