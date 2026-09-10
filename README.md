@@ -11,6 +11,7 @@ This repository holds the reviewed `kohort_bumil_v3` source-preparation, geograp
 - [Execution and maintenance runbook](docs/runbook.md): refresh order, setup dependencies and deployment cautions.
 - [Validation guide](validation/README.md): which checks need the retained migration baseline.
 - [SIGIZI deletion-exclusion update](migrations/sigizi_deletion/README.md): registry setup, pregnancy-specific rules, audit and scheduled-query replacement.
+- [New-pregnancy first-seen logic](docs/workflow.md#first-appearance-and-new-pregnancy-measures): raw-history lineage, pregnancy first appearance and daily or rolling measures.
 - [Import provenance](docs/import_manifest.json): original package paths and file checksums.
 
 ## Repository layout
@@ -34,6 +35,8 @@ Run complete standalone SQL files in dependency order. Source preparation must f
 Deploy `01a_sigizi_deleted_registry.sql` before the updated SIGIZI source build. `vs_sigizi_bumil_hapus` is an exclusion reference, never a clinical source to union. Replace the existing scheduled `03_sigizi_source.sql` text with the updated file; leaving an old builder active can reintroduce deleted records. Refresh the retained raw deletion exports before the source job, and run deletion checks before and after the downstream rebuild.
 
 The reporting deployment reads its field contract from `kohort_bumil_v3_validation.independent_20260903_view_columns`. Preserve that metadata. The one-time geography seed reads the maintained v2 location reference; recurring geography correction reads v3. Raw, Kobo, adjudication and facility-reporting inputs remain external to this repository.
+
+The first-seen extension is split deliberately. `sql/core/21_pregnancy_first_seen.sql` refreshes the source-lineage and pregnancy-summary tables after pregnancy canonicalization. `sql/reporting/71_pregnancy_first_seen_views.sql` creates the registry and daily metrics views in a separate BigQuery job because permanent views cannot be created in the same script session as temporary UDFs. The views need redeployment only when their definitions change.
 
 ## Scope and safety
 

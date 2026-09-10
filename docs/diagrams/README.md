@@ -12,6 +12,7 @@ The [workflow overview](../workflow.md) includes an editable Mermaid diagram. Th
 | `kobo_sources` | INC submissions, adjudication and neonatal records |
 | `other_sources` | Combined SIMRS/Kobo/facility detail for screen viewing |
 | `core_reporting` | Pregnancy/evidence inputs through matching and reporting |
+| `pregnancy_first_seen` | Historical source lineage, pregnancy first appearance and new-pregnancy measures |
 
 Grey boxes are raw inputs, blue boxes are views, green boxes are stored tables, and amber boxes group processing steps. A dashed facility edge identifies an external boundary; it does not assert a verified raw-table dependency. Diagram groups omit some intermediate tables, maps and audit reads. See the guide for the expanded preparation path and exact reporting dependencies.
 

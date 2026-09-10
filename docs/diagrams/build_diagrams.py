@@ -148,6 +148,31 @@ def core(include_inputs=True):
     return content
 
 (OUT/'core_reporting.dot').write_text(graph(core()))
+
+# First-observed pregnancy lineage and reporting. This is intentionally separate
+# from the clinical matching diagram because it measures source visibility, not
+# visit sequence or clinical registration.
+first_seen = (
+    node('raw_history', 'Historical SIGIZI and EPUS exports\nfile name and ingestion time', 'raw')
+    + node('source_rows', 'Cleaned source records\nsource identifiers and selected row', 'view')
+    + node('first_spine', 't_pregnancy_episode_spine_v3_3\ncanonical pregnancy membership')
+    + node('lineage', 't_pregnancy_source_upload_lineage_v3_3\none pregnancy by one source record')
+    + node('upload_summary', 't_pregnancy_upload_summary_v3_3\none row per pregnancy and first seen date')
+    + node('monitoring', 'v_pregnancy_monitoring_integrated\nstatus outcome HPHT HPL and delivery', 'view')
+    + node('registry', 'v_pregnancy_registry_v3_3\npregnancy details with first appearance', 'view')
+    + node('metrics', 'v_new_pregnancy_metrics_daily_v3_3\ndaily rolling 7 day and rolling 30 day counts', 'view')
+    + edge('raw_history', 'source_rows')
+    + edge('raw_history', 'lineage', 'earliest retained history')
+    + edge('source_rows', 'first_spine')
+    + edge('source_rows', 'lineage')
+    + edge('first_spine', 'lineage')
+    + edge('lineage', 'upload_summary')
+    + edge('upload_summary', 'registry')
+    + edge('monitoring', 'registry')
+    + edge('upload_summary', 'metrics')
+)
+(OUT/'pregnancy_first_seen.dot').write_text(graph(first_seen))
+
 compact_kobo = group('kobo', 'Kobo | INC and neonatal outcomes',
     node('kraw', 'data_kobo_form\ne-form_pencatatan_pelayanan_intranatal_care\nneonatus_outcome_v2\n\ndata_adjudication.adj_final', 'raw')
     + node('kviews', 'vs_kobo_inc_submission_clean\nvs_kobo_inc_case_master\nvs_kobo_neonatus_outcome_v2_baby', 'view')

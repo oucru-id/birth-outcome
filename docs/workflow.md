@@ -95,6 +95,14 @@ flowchart TD
   SP --> TRACK["t_pregnancy_outcome_tracking_v3_3"]
   USG --> TRACK
   OE --> TRACK
+  SR --> LINEAGE["t_pregnancy_source_upload_lineage_v3_3
+  Raw-history first and last appearance"]
+  ER --> LINEAGE
+  SS --> LINEAGE
+  ES --> LINEAGE
+  SP --> LINEAGE
+  LINEAGE --> UPLOAD["t_pregnancy_upload_summary_v3_3
+  One row per pregnancy"]
   OE --> DS["t_delivery_source_records"]
   DS --> DB["t_delivery_dedup_base"]
   DB --> DU["t_delivery_event_master_unlinked"]
@@ -106,6 +114,9 @@ flowchart TD
   TRACK --> PI["v_pregnancy_monitoring_integrated"]
   VALID --> PI
   VALID --> DI["v_delivery_monitoring_integrated"]
+  PI --> REGISTRY["v_pregnancy_registry_v3_3"]
+  UPLOAD --> REGISTRY
+  UPLOAD --> NEWMETRIC["v_new_pregnancy_metrics_daily_v3_3"]
   PI --> SCOPE["v_pregnancy_monitoring_by_source_scope"]
   SCOPE --> PL["Looker pregnancy monitoring"]
   DI --> DL["Looker delivery and ANC linkage"]
@@ -173,3 +184,17 @@ Other reporting views support dating, birth weight, source overlap, capture and 
 **Reporting** combines pregnancy tracking with validated delivery evidence. Pregnancy monitoring is based on the selected expected-delivery date; delivery reporting is based on actual delivery events and valid-birth rules. Use the intended source scope, eligibility filter, date dimension and row grain in Looker.
 
 These stages do not all use the same thresholds, tie treatment or acceptance rules. Consult the detailed guide and the corresponding SQL before changing a rule.
+
+## First appearance and new pregnancy measures
+
+The first-seen extension answers when a canonical pregnancy first became observable in the available data. It does not require the first record to be K1 or another particular visit. A pregnancy first found through a later ANC visit is new on that first observable upload date. Later records from either source enrich the same pregnancy and do not count it again. A later pregnancy belonging to the same woman receives its own pregnancy episode and first-seen date.
+
+`t_pregnancy_source_upload_lineage_v3_3` follows every final pregnancy through its canonical SIGIZI or EPUS membership to the contributing source records. It inspects retained raw file history by stable UUID or hash when available. The SIGIZI ANC adapter also supplies its retained earliest file. When neither route is available, the table uses the timestamp on the cleaned source row and marks `first_seen_fallback_flag`. The table keeps first and last upload, ingestion and observed timestamps at source-record grain.
+
+`t_pregnancy_upload_summary_v3_3` aggregates that lineage to one row per `pregnancy_episode_id`. `pregnancy_first_seen_timestamp` uses the earliest contributing file-upload timestamp and uses earliest ingestion as a fallback. `pregnancy_first_seen_date` is its WITA date. Separate upload and ingestion fields allow an audit of when the source export was produced and when BigQuery received it.
+
+`v_pregnancy_registry_v3_3` joins the first-seen summary to `v_pregnancy_monitoring_integrated`. It exposes identity, phone, pregnancy status, outcome, HPHT, selected HPL, first appearance, actual delivery and geography at pregnancy grain.
+
+`v_new_pregnancy_metrics_daily_v3_3` reports distinct pregnancy episodes by first-seen date. The daily measure counts episodes first seen on the metric date. The rolling seven-day measure includes the metric date and six preceding dates. The rolling thirty-day measure includes the metric date and twenty-nine preceding dates. `source_scope = ALL` is the unduplicated total. SIGIZI and EPUS scopes describe the system of first appearance, while `pregnancy_source_combination` in the registry describes the pregnancy's current cross-source membership.
+
+These fields describe first visibility in the retained data history, not necessarily the date a clinician originally registered the pregnancy. Retrospective uploads can make the observable first-seen date later than the clinical event date. Use the fallback and resolution-method fields when auditing that distinction.

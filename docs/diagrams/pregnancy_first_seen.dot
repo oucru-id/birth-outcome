@@ -1,0 +1,24 @@
+digraph pipeline {
+graph [rankdir=TB, bgcolor="white", fontname="DejaVu Sans", fontsize=14,
+       nodesep=0.26, ranksep=0.40, pad=0.14, compound=true, newrank=true];
+node [shape=box, fontname="DejaVu Sans", fontsize=11, color="#60768A",
+      penwidth=0.8, margin="0.14,0.09"];
+edge [fontname="DejaVu Sans", fontsize=9, color="#60768A", arrowsize=0.7];
+raw_history [label="Historical SIGIZI and EPUS exports\nfile name and ingestion time", fillcolor="#F1F3F5", style="rounded,filled"];
+source_rows [label="Cleaned source records\nsource identifiers and selected row", fillcolor="#E8EFF8", style="rounded,filled"];
+first_spine [label="t_pregnancy_episode_spine_v3_3\ncanonical pregnancy membership", fillcolor="#E8F2EE", style="rounded,filled"];
+lineage [label="t_pregnancy_source_upload_lineage_\nv3_3\none pregnancy by one source record", fillcolor="#E8F2EE", style="rounded,filled"];
+upload_summary [label="t_pregnancy_upload_summary_v3_3\none row per pregnancy and first\nseen date", fillcolor="#E8F2EE", style="rounded,filled"];
+monitoring [label="v_pregnancy_monitoring_integrated\nstatus outcome HPHT HPL and\ndelivery", fillcolor="#E8EFF8", style="rounded,filled"];
+registry [label="v_pregnancy_registry_v3_3\npregnancy details with first\nappearance", fillcolor="#E8EFF8", style="rounded,filled"];
+metrics [label="v_new_pregnancy_metrics_daily_v3_3\ndaily rolling 7 day and rolling 30\nday counts", fillcolor="#E8EFF8", style="rounded,filled"];
+raw_history -> source_rows;
+raw_history -> lineage [label="earliest retained history"];
+source_rows -> first_spine;
+source_rows -> lineage;
+first_spine -> lineage;
+lineage -> upload_summary;
+upload_summary -> registry;
+monitoring -> registry;
+upload_summary -> metrics;
+}

@@ -17,6 +17,7 @@ Uploading this repository does not configure or run any scheduled query. No auto
 | `sql/setup/02_reference.sql` | Build the stepped-wedge reference from recovered inline definitions | Uses replacement semantics; do not overwrite maintained changes as a daily job |
 | `sql/setup/01_seed_location_reference.sql` | Seed the v3 location reference from the maintained v2 reference | One-time v2 dependency; preserves an existing v3 table; does not establish historical reference equivalence |
 | `sql/reporting/70_reporting_views.sql` | Deploy reporting views using saved explicit field projections | Requires the retained schema-contract table described below |
+| `sql/reporting/71_pregnancy_first_seen_views.sql` | Create the pregnancy registry and daily new-pregnancy metrics views | Run in a separate BigQuery job after Stage 21; no temporary UDFs |
 
 The setup folder is a classification, not an instruction to execute every file alphabetically. Review the purpose and prerequisites of each file first.
 
@@ -36,6 +37,7 @@ Run each file as a complete standalone query job. Wait for success before starti
 | Next | `sql/core/10_sigizi_episodes.sql` | Build SIGIZI pregnancy episodes |
 | Next | `sql/core/11_epus_adapter.sql` | Adapt the v3 EPUS master; do not run an older v2-copy bridge |
 | Next | `sql/core/20_pregnancy_canonicalization.sql` | Canonicalize and match pregnancy episodes |
+| Next | `sql/core/21_pregnancy_first_seen.sql` | Trace canonical pregnancies to raw upload history and refresh first-seen summaries |
 | Next | `sql/core/30_usg_and_outcome_evidence.sql` | Build USG dating and outcome evidence |
 | Next | `sql/core/40_outcome_tracking.sql` | Build pregnancy outcome tracking |
 | Next | `sql/core/50_delivery_canonicalization.sql` | Deduplicate deliveries and apply ANC linkage |
@@ -47,6 +49,16 @@ This sequential order is a conservative valid schedule. An orchestrator may para
 The operational `monitoring_start_date` is currently declared as `2025-12-01` in `40_outcome_tracking.sql`. It is a cohort rule, not the lower bound for every analysis. Review it separately from other source/reporting date windows.
 
 Views do not need daily recreation solely because their underlying tables were rebuilt. Redeploy view definitions deliberately when the SQL or reporting contract changes.
+
+## New pregnancy first-seen dependency
+
+Run `21_pregnancy_first_seen.sql` after Stage 20 succeeds. It replaces `t_pregnancy_source_upload_lineage_v3_3` and `t_pregnancy_upload_summary_v3_3`. It reads the final canonical pregnancy membership, SIGIZI and EPUS source records, and retained raw upload history. It does not classify a pregnancy as new from ANC visit number.
+
+Run `71_pregnancy_first_seen_views.sql` as a separate BigQuery job when deploying or changing the views. Do not concatenate it with Stage 21. Stage 21 uses temporary UDFs to parse source metadata, and BigQuery does not support creating permanent views in that same script session. After deployment, `v_pregnancy_registry_v3_3` and `v_new_pregnancy_metrics_daily_v3_3` automatically read the refreshed tables and do not require daily recreation.
+
+For recurring execution, schedule Stage 21 after Stage 20. Keep Stage 71 out of the daily table-refresh chain unless an operational deployment process deliberately recreates view definitions. A successful Stage 21 refresh changes the values returned by both views without changing their definitions.
+
+Validate first-seen coverage after Stage 21. Review `pregnancy_first_seen_resolution_method`, `source_records_using_first_seen_fallback` and `any_first_seen_fallback_flag`. A fallback record has complete reporting metadata but may not prove the earliest historical raw appearance. Daily and rolling counts must use distinct `pregnancy_episode_id` and `pregnancy_first_seen_date`; do not use ANC visit date, HPHT, HPL or current source-row count as substitutes.
 
 ## SIGIZI deletion dependency
 
