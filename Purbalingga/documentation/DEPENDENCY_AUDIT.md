@@ -20,3 +20,20 @@ The full parent creates all canonical-pregnancy bridge objects, including:
 - `t_pregnancy_episode_spine_v3_3`
 
 The production schedule should therefore use the full parent script plus the later v4.1.1 patch as one PBG-05 job.
+
+## PBG-05C pregnancy first-seen extension
+
+PBG-05C creates two permanent tables after canonical pregnancy resolution:
+
+- `t_pregnancy_source_upload_lineage_v3_3`
+- `t_pregnancy_upload_summary_v3_3`
+
+Its internal dependencies are the final pregnancy spine, the SIGIZI/ePUS
+preliminary pregnancy episodes, their cleaned source-record tables, and the six
+retained raw pregnancy-creating source tables documented in
+`PREGNANCY_FIRST_SEEN.md`. It has no dependency on eKohort, SIMRS, Birth
+Confirmation, SIGIZI IBU_NIFAS, or ePUS INC/PNC because those sources cannot
+create or backdate canonical pregnancy membership.
+
+The two permanent reporting views are deployed separately and are not daily
+scheduled objects.

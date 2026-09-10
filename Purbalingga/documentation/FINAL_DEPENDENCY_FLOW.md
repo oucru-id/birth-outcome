@@ -26,7 +26,12 @@ PBG-05 FULL pregnancy identity resolution
   - v4.1.1 safety patch
                     ↓
        t_pregnancy_episode_spine_v3_3
-                    │
+          │                   │
+          │                   └──→ PBG-05C
+          │                         │
+          │              first-seen lineage + summary
+          │                         │
+          │              registry + daily metrics views
                     │
 delivery raw feeds  │
 (SIGIZI/ePUS/SIMRS/eKohort/BC)
@@ -48,3 +53,8 @@ delivery raw feeds  │
                 ↓
           Looker Studio
 ```
+
+PBG-05C depends only on successful PBG-05 plus retained SIGIZI/ePUS pregnancy
+source history. It may run in parallel with PBG-06/PBG-07. Its permanent views
+are deployed once from `views_deploy_once/15_v_pregnancy_first_seen.sql` and
+automatically reflect subsequent table refreshes.
