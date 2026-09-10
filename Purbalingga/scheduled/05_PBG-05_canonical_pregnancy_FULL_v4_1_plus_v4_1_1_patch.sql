@@ -5460,33 +5460,13 @@ ORDER BY
 
 
 -- ============================================================================
--- PARAMETERS
+-- PART B REUSES THE PARAMETERS AND FUNCTIONS DECLARED IN PART A
+--
+-- BigQuery permits DECLARE statements only before the first executable
+-- statement in a script. The values required by this patch are already
+-- declared at the beginning of Part A, and nik_is_trusted() is also already
+-- defined there.
 -- ============================================================================
-
-DECLARE delivery_tolerance_days INT64 DEFAULT 3;
-DECLARE strong_hpht_tolerance_days INT64 DEFAULT 14;
-DECLARE strong_hpl_tolerance_days INT64 DEFAULT 14;
-DECLARE hpl_tolerance_days INT64 DEFAULT 7;
-DECLARE final_guard_anchor_tolerance_days INT64 DEFAULT 30;
-
-
-
--- ============================================================================
--- FUNCTIONS
--- ============================================================================
-
-CREATE TEMP FUNCTION nik_is_trusted(s STRING)
-RETURNS BOOL
-AS (
-  s IS NOT NULL
-  AND REGEXP_CONTAINS(s, r'^\d{16}$')
-  AND s NOT IN (
-    '0000000000000000',
-    '9999999999999999'
-  )
-  AND RIGHT(s, 4) != '0000'
-);
-
 
 
 -- ============================================================================
