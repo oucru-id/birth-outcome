@@ -398,7 +398,6 @@ WITH resolved_base AS (
       r.last_ingestion_timestamp,
       l.selected_ingestion_timestamp
     ) AS record_last_ingestion_timestamp,
-    l.selected_file_date_timestamp,
     COALESCE(r.raw_version_count, 0) AS raw_version_count,
     r.stable_source_record_id IS NOT NULL AS raw_history_match_flag,
     COALESCE(c.matching_source_table_count, 1) > 1
