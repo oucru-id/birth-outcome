@@ -1,4 +1,4 @@
-# Purbalingga Production SQL Package — FINAL v1.6
+# Purbalingga Production SQL Package — v1.7
 
 Project: `stellar-orb-451904-d9`  
 Dataset: `kohort_bumil_v2`  
@@ -42,12 +42,25 @@ This makes PBG-05 self-contained from the PBG-02/PBG-04 outputs.
 PBG-01 → PBG-02  
 PBG-03 → PBG-04  
 PBG-02 + PBG-04 → PBG-05  
+PBG-05 → PBG-05C pregnancy first-seen tables  
 PBG-01 + PBG-03 + delivery raw feeds → PBG-06  
 PBG-05 + PBG-07 → PBG-08 → PBG-09 → PBG-10 → QA
 
 ## Daily requirement
 
 PBG-10 must run daily even when raw inputs did not change, because operational pregnancy status depends on `CURRENT_DATE('Asia/Jakarta')`.
+
+## Pregnancy first-seen extension
+
+`scheduled/05C_PBG-05C_pregnancy_first_seen.sql` builds the source-upload
+lineage and one-row-per-pregnancy upload summary after PBG-05. It defines a new
+pregnancy by the first retained source-file upload in which its final canonical
+episode is observable—not by K1, ANC date, HPHT, HPL, or delivery date.
+
+Deploy `views_deploy_once/15_v_pregnancy_first_seen.sql` separately and only
+when its definitions change. See
+`documentation/PREGNANCY_FIRST_SEEN.md` for full lineage, timestamp, metric,
+deployment, and limitation details.
 
 ## Reporting views
 
