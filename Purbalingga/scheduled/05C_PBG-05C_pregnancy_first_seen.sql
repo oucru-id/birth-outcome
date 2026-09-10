@@ -424,7 +424,9 @@ WITH resolved_base AS (
    AND r.source_table = l.source_table
    AND r.stable_source_record_id = l.source_record_id
   LEFT JOIN `_SESSION.t_selected_source_id_collisions_v3_3` c
-    USING (pregnancy_episode_id, source_system, source_record_id)
+    ON c.pregnancy_episode_id = l.pregnancy_episode_id
+   AND c.source_system = l.source_system
+   AND c.source_record_id = l.source_record_id
 ),
 with_seen AS (
   SELECT
