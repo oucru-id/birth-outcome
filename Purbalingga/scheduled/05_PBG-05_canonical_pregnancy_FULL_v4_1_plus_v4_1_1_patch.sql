@@ -141,6 +141,58 @@ AS (
 );
 
 
+CREATE TEMP FUNCTION maternal_nik_birth_date(
+  s STRING,
+  reference_date DATE
+)
+RETURNS DATE
+AS (
+  CASE
+    WHEN nik_is_trusted(s)
+     AND reference_date IS NOT NULL
+     AND SAFE_CAST(SUBSTR(s, 7, 2) AS INT64) BETWEEN 41 AND 71
+     AND SAFE_CAST(SUBSTR(s, 9, 2) AS INT64) BETWEEN 1 AND 12
+
+    THEN SAFE.PARSE_DATE(
+      '%Y%m%d',
+      CONCAT(
+        CASE
+          WHEN SAFE_CAST(SUBSTR(s, 11, 2) AS INT64)
+                 <= MOD(EXTRACT(YEAR FROM reference_date), 100)
+            THEN '20'
+          ELSE '19'
+        END,
+        SUBSTR(s, 11, 2),
+        SUBSTR(s, 9, 2),
+        LPAD(
+          CAST(
+            SAFE_CAST(SUBSTR(s, 7, 2) AS INT64) - 40
+            AS STRING
+          ),
+          2,
+          '0'
+        )
+      )
+    )
+  END
+);
+
+
+CREATE TEMP FUNCTION maternal_nik_is_plausible(
+  s STRING,
+  reference_date DATE
+)
+RETURNS BOOL
+AS (
+  maternal_nik_birth_date(s, reference_date) IS NOT NULL
+  AND DATE_DIFF(
+        reference_date,
+        maternal_nik_birth_date(s, reference_date),
+        YEAR
+      ) BETWEEN 10 AND 60
+);
+
+
 CREATE TEMP FUNCTION nik_hard_conflict(
   a STRING,
   b STRING
@@ -5220,7 +5272,30 @@ LEFT JOIN value_arrays va
   USING (canonical_pregnancy_episode_id)
 
 LEFT JOIN cross_conflict cc
-  USING (canonical_pregnancy_episode_id);
+  USING (canonical_pregnancy_episode_id)
+
+-- Final denominator safeguard: require either a usable maternal name or a
+-- NIK that is plausible for a female of reproductive age at the pregnancy
+-- reference date.
+WHERE
+     sp.name_pick.value_core IS NOT NULL
+
+  OR maternal_nik_is_plausible(
+       sp.nik_pick.value,
+       COALESCE(
+         sp.hpht_epus_pick.value,
+         sp.hpht_sigizi_pick.value,
+         DATE_SUB(
+           COALESCE(
+             sp.hpl_epus_pick.value,
+             sp.hpl_sigizi_pick.value
+           ),
+           INTERVAL 280 DAY
+         ),
+         g.group_first_anc_date,
+         CURRENT_DATE('Asia/Jakarta')
+       )
+     );
 
 
 
@@ -5456,36 +5531,6 @@ ORDER BY
 --   exact/similar pregnancy dating is not sufficient by itself to override
 --   disagreement in BOTH strong maternal identifiers.
 -- ============================================================================
-
-
-
--- ============================================================================
--- PARAMETERS
--- ============================================================================
-
-DECLARE delivery_tolerance_days INT64 DEFAULT 3;
-DECLARE strong_hpht_tolerance_days INT64 DEFAULT 14;
-DECLARE strong_hpl_tolerance_days INT64 DEFAULT 14;
-DECLARE hpl_tolerance_days INT64 DEFAULT 7;
-DECLARE final_guard_anchor_tolerance_days INT64 DEFAULT 30;
-
-
-
--- ============================================================================
--- FUNCTIONS
--- ============================================================================
-
-CREATE TEMP FUNCTION nik_is_trusted(s STRING)
-RETURNS BOOL
-AS (
-  s IS NOT NULL
-  AND REGEXP_CONTAINS(s, r'^\d{16}$')
-  AND s NOT IN (
-    '0000000000000000',
-    '9999999999999999'
-  )
-  AND RIGHT(s, 4) != '0000'
-);
 
 
 
@@ -7313,4 +7358,26 @@ LEFT JOIN value_arrays va
   USING (canonical_pregnancy_episode_id)
 
 LEFT JOIN cross_conflict cc
-  USING (canonical_pregnancy_episode_id);
+  USING (canonical_pregnancy_episode_id)
+
+-- Repeat the denominator safeguard in the v4.1.1 rebuild because this second
+-- CREATE OR REPLACE TABLE is the final retained pregnancy spine.
+WHERE
+     sp.name_pick.value_core IS NOT NULL
+
+  OR maternal_nik_is_plausible(
+       sp.nik_pick.value,
+       COALESCE(
+         sp.hpht_epus_pick.value,
+         sp.hpht_sigizi_pick.value,
+         DATE_SUB(
+           COALESCE(
+             sp.hpl_epus_pick.value,
+             sp.hpl_sigizi_pick.value
+           ),
+           INTERVAL 280 DAY
+         ),
+         g.group_first_anc_date,
+         CURRENT_DATE('Asia/Jakarta')
+       )
+     );

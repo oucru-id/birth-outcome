@@ -169,6 +169,81 @@ AS (
 
 
 -- ----------------------------------------------------------------------------
+-- Trusted and plausible maternal NIK
+--
+-- Indonesian female NIK encodes the birth day as day + 40. The birth date
+-- derived from the NIK must also represent a plausible maternal age at the
+-- pregnancy reference date. This prevents child or male patient NIKs from
+-- creating pregnancy episodes when the maternal name is absent.
+-- ----------------------------------------------------------------------------
+
+CREATE TEMP FUNCTION nik_is_trusted(s STRING)
+RETURNS BOOL
+AS (
+  s IS NOT NULL
+  AND REGEXP_CONTAINS(s, r'^\d{16}$')
+  AND s NOT IN (
+    '0000000000000000',
+    '9999999999999999'
+  )
+  AND RIGHT(s, 4) != '0000'
+);
+
+
+CREATE TEMP FUNCTION maternal_nik_birth_date(
+  s STRING,
+  reference_date DATE
+)
+RETURNS DATE
+AS (
+  CASE
+    WHEN nik_is_trusted(s)
+     AND reference_date IS NOT NULL
+     AND SAFE_CAST(SUBSTR(s, 7, 2) AS INT64) BETWEEN 41 AND 71
+     AND SAFE_CAST(SUBSTR(s, 9, 2) AS INT64) BETWEEN 1 AND 12
+
+    THEN SAFE.PARSE_DATE(
+      '%Y%m%d',
+      CONCAT(
+        CASE
+          WHEN SAFE_CAST(SUBSTR(s, 11, 2) AS INT64)
+                 <= MOD(EXTRACT(YEAR FROM reference_date), 100)
+            THEN '20'
+          ELSE '19'
+        END,
+        SUBSTR(s, 11, 2),
+        SUBSTR(s, 9, 2),
+        LPAD(
+          CAST(
+            SAFE_CAST(SUBSTR(s, 7, 2) AS INT64) - 40
+            AS STRING
+          ),
+          2,
+          '0'
+        )
+      )
+    )
+  END
+);
+
+
+CREATE TEMP FUNCTION maternal_nik_is_plausible(
+  s STRING,
+  reference_date DATE
+)
+RETURNS BOOL
+AS (
+  maternal_nik_birth_date(s, reference_date) IS NOT NULL
+  AND DATE_DIFF(
+        reference_date,
+        maternal_nik_birth_date(s, reference_date),
+        YEAR
+      ) BETWEEN 10 AND 60
+);
+
+
+
+-- ----------------------------------------------------------------------------
 -- Generic Puskesmas normalization
 --
 -- IMPORTANT:
@@ -315,6 +390,24 @@ source_base AS (
     AND NOT (
          is_sigizi_anon_placeholder(nama)
       OR is_sigizi_anon_placeholder(nama_norm)
+    )
+
+    -- A pregnancy-denominator record must have either a usable maternal name
+    -- or a NIK that is plausible for a female of reproductive age at the
+    -- pregnancy date. Date-only, child-NIK, and male-NIK rows remain available
+    -- in t_sigizi_source_records for audit but cannot create pregnancies.
+    AND (
+         norm_name_core(nama) IS NOT NULL
+
+      OR maternal_nik_is_plausible(
+           nik_clean,
+           COALESCE(
+             hpht_date,
+             DATE_SUB(hpl_date, INTERVAL 280 DAY),
+             anc_date,
+             analysis_date
+           )
+         )
     )
 
 ),

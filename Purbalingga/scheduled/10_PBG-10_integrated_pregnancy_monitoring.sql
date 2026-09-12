@@ -8,6 +8,7 @@
 --   t_delivery_source_records_v3_3
 --   t_delivery_event_canonical_post_anc_v3_3
 --   raw_data.epus_anc
+--   raw_data.epus_laporan_pelayanan_pasien_update
 --
 -- OUTPUTS
 --   t_pregnancy_usg_dating_v3_3
@@ -44,6 +45,12 @@
 --
 -- HPL TODAY IS NOT OVERDUE:
 --       expected_delivery_date < analysis_date
+--
+-- PHONE ENRICHMENT:
+--
+--   raw_data.epus_laporan_pelayanan_pasien_update is linked only by trusted
+--   NIK after canonical pregnancy creation. It fills missing phone numbers
+--   and does not create, merge, or rematch pregnancy episodes.
 -- ============================================================================
 
 
@@ -198,6 +205,23 @@ AS (
 );
 
 
+CREATE TEMP FUNCTION clean_phone(s STRING)
+RETURNS STRING
+AS (
+  NULLIF(
+    REGEXP_REPLACE(
+      COALESCE(
+        clean_raw(s),
+        ''
+      ),
+      r'[^0-9]',
+      ''
+    ),
+    ''
+  )
+);
+
+
 CREATE TEMP FUNCTION nik_is_trusted(s STRING)
 RETURNS BOOL
 AS (
@@ -214,6 +238,58 @@ AS (
   )
 
   AND RIGHT(s, 4) != '0000'
+);
+
+
+CREATE TEMP FUNCTION maternal_nik_birth_date(
+  s STRING,
+  reference_date DATE
+)
+RETURNS DATE
+AS (
+  CASE
+    WHEN nik_is_trusted(s)
+     AND reference_date IS NOT NULL
+     AND SAFE_CAST(SUBSTR(s, 7, 2) AS INT64) BETWEEN 41 AND 71
+     AND SAFE_CAST(SUBSTR(s, 9, 2) AS INT64) BETWEEN 1 AND 12
+
+    THEN SAFE.PARSE_DATE(
+      '%Y%m%d',
+      CONCAT(
+        CASE
+          WHEN SAFE_CAST(SUBSTR(s, 11, 2) AS INT64)
+                 <= MOD(EXTRACT(YEAR FROM reference_date), 100)
+            THEN '20'
+          ELSE '19'
+        END,
+        SUBSTR(s, 11, 2),
+        SUBSTR(s, 9, 2),
+        LPAD(
+          CAST(
+            SAFE_CAST(SUBSTR(s, 7, 2) AS INT64) - 40
+            AS STRING
+          ),
+          2,
+          '0'
+        )
+      )
+    )
+  END
+);
+
+
+CREATE TEMP FUNCTION maternal_nik_is_plausible(
+  s STRING,
+  reference_date DATE
+)
+RETURNS BOOL
+AS (
+  maternal_nik_birth_date(s, reference_date) IS NOT NULL
+  AND DATE_DIFF(
+        reference_date,
+        maternal_nik_birth_date(s, reference_date),
+        YEAR
+      ) BETWEEN 10 AND 60
 );
 
 
@@ -2276,7 +2352,127 @@ CLUSTER BY
 
 AS
 
-WITH abortion_date_votes AS (
+WITH epus_patient_phone_ranked AS (
+
+  -- ------------------------------------------------------------------------
+  -- GENERAL ePUS PATIENT-REPORT PHONE ENRICHMENT
+  --
+  -- This source is not a pregnancy-membership source. It is used only to
+  -- fill a missing phone after canonical pregnancy creation. Restricting the
+  -- linkage to trusted NIK prevents general patient visits from creating or
+  -- rematching pregnancy episodes.
+  -- ------------------------------------------------------------------------
+
+  SELECT
+
+    clean_nik(nik) AS nik_clean,
+
+    clean_phone(no_telp)
+      AS epus_patient_no_hp_clean,
+
+    NULLIF(
+      TRIM(file_name),
+      ''
+    ) AS file_name,
+
+    parse_date_any(file_date)
+      AS file_date,
+
+    SAFE_CAST(
+      NULLIF(
+        TRIM(ingestion_timestamp),
+        ''
+      )
+      AS TIMESTAMP
+    ) AS ingestion_timestamp,
+
+    parse_date_any(tanggal_pemeriksaan)
+      AS service_date,
+
+    NULLIF(
+      TRIM(uuid),
+      ''
+    ) AS source_uuid,
+
+    NULLIF(
+      TRIM(hash_code),
+      ''
+    ) AS source_hash_code,
+
+
+    ROW_NUMBER() OVER (
+
+      PARTITION BY clean_nik(nik)
+
+      ORDER BY
+        SAFE_CAST(
+          NULLIF(
+            TRIM(ingestion_timestamp),
+            ''
+          )
+          AS TIMESTAMP
+        ) DESC,
+
+        parse_date_any(tanggal_pemeriksaan) DESC,
+
+        parse_date_any(file_date) DESC,
+
+        NULLIF(
+          TRIM(file_name),
+          ''
+        ) DESC,
+
+        NULLIF(
+          TRIM(uuid),
+          ''
+        ) DESC,
+
+        NULLIF(
+          TRIM(hash_code),
+          ''
+        ) DESC
+
+    ) AS phone_rank
+
+
+  FROM
+    `stellar-orb-451904-d9.raw_data.epus_laporan_pelayanan_pasien_update`
+
+
+  WHERE
+    nik_is_trusted(
+      clean_nik(nik)
+    )
+
+    AND LENGTH(
+      COALESCE(
+        clean_phone(no_telp),
+        ''
+      )
+    ) BETWEEN 8 AND 15
+
+    AND clean_phone(no_telp) NOT IN (
+      '00000000',
+      '081111',
+      '0810000',
+      '081234567',
+      '080000'
+    )
+),
+
+
+epus_patient_phone AS (
+
+  SELECT
+    * EXCEPT (phone_rank)
+
+  FROM epus_patient_phone_ranked
+
+  WHERE phone_rank = 1
+),
+
+
+abortion_date_votes AS (
 
   SELECT
 
@@ -2682,7 +2878,49 @@ pregnancy_base AS (
 
     p.tanggal_lahir_ibu,
 
-    p.no_hp_clean,
+    COALESCE(
+      p.no_hp_clean,
+      eph.epus_patient_no_hp_clean
+    ) AS no_hp_clean,
+
+
+    p.no_hp_clean
+      AS pregnancy_source_no_hp_clean,
+
+    eph.epus_patient_no_hp_clean
+      AS epus_patient_report_no_hp_clean,
+
+
+    CASE
+
+      WHEN p.no_hp_clean IS NOT NULL
+        THEN 'PREGNANCY_SOURCE'
+
+      WHEN eph.epus_patient_no_hp_clean IS NOT NULL
+        THEN 'EPUS_LAPORAN_PELAYANAN_PASIEN_UPDATE'
+
+      ELSE 'MISSING'
+
+    END AS no_hp_selected_source,
+
+
+    eph.file_name
+      AS no_hp_source_file_name,
+
+    eph.file_date
+      AS no_hp_source_file_date,
+
+    eph.ingestion_timestamp
+      AS no_hp_source_ingestion_timestamp,
+
+    eph.service_date
+      AS no_hp_source_service_date,
+
+    eph.source_uuid
+      AS no_hp_source_uuid,
+
+    eph.source_hash_code
+      AS no_hp_source_hash_code,
 
 
     p.puskesmas,
@@ -3059,6 +3297,23 @@ pregnancy_base AS (
 
   FROM
     `stellar-orb-451904-d9.kohort_bumil_v2.t_pregnancy_episode_spine_v3_3` p
+
+
+  LEFT JOIN epus_patient_phone eph
+    ON eph.nik_clean = p.nik_clean
+
+   AND maternal_nik_is_plausible(
+         p.nik_clean,
+         COALESCE(
+           p.pregnancy_anchor_date,
+           p.hpht_date,
+           DATE_SUB(
+             p.hpl_recorded_date,
+             INTERVAL 280 DAY
+           ),
+           analysis_date
+         )
+       )
 
 
   LEFT JOIN
@@ -4261,3 +4516,41 @@ GROUP BY birth_evidence_type
 
 
 ORDER BY pregnancies DESC;
+
+
+-- ############################################################################
+-- QA 14
+-- PHONE ENRICHMENT COVERAGE AND FINAL-GRAIN SAFETY
+--
+-- EXPECTED:
+-- pregnancy_rows = distinct_pregnancy_episode_ids
+-- ############################################################################
+
+SELECT
+
+  COUNT(*) AS pregnancy_rows,
+
+  COUNT(
+    DISTINCT pregnancy_episode_id
+  ) AS distinct_pregnancy_episode_ids,
+
+  COUNTIF(
+    no_hp_clean IS NOT NULL
+  ) AS pregnancies_with_phone,
+
+  COUNTIF(
+    no_hp_selected_source = 'PREGNANCY_SOURCE'
+  ) AS phone_from_pregnancy_source,
+
+  COUNTIF(
+    no_hp_selected_source
+      = 'EPUS_LAPORAN_PELAYANAN_PASIEN_UPDATE'
+  ) AS phone_filled_from_epus_patient_report,
+
+  COUNTIF(
+    no_hp_selected_source = 'MISSING'
+  ) AS pregnancies_still_without_phone
+
+
+FROM
+  `stellar-orb-451904-d9.kohort_bumil_v2.t_pregnancy_monitoring_integrated_v3_3`;
