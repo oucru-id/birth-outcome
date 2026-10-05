@@ -1,5 +1,9 @@
 # Final dependency flow
 
+For the complete raw-source-to-view diagram, including the first-seen branch,
+delivery branch, PBG-10 enrichment inputs, QA, and deploy-once reporting views,
+see [`PURBALINGGA_PIPELINE_DIAGRAM.md`](PURBALINGGA_PIPELINE_DIAGRAM.md).
+
 ```text
 SIGIZI raw
    ↓
