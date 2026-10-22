@@ -131,10 +131,14 @@ SELECT
     AS safe_desa_candidates,
   COUNTIF(e.conflict_member_count > 0)
     AS member_desa_review,
-  COUNTIF(e.distinct_member_desa > 1)
-    AS multiple_member_desa,
-  COUNTIF(e.distinct_member_desa = 0)
-    AS no_member_desa,
+  COUNTIF(
+    e.conflict_member_count = 0
+    AND e.distinct_member_desa > 1
+  ) AS multiple_member_desa,
+  COUNTIF(
+    e.conflict_member_count = 0
+    AND e.distinct_member_desa = 0
+  ) AS no_member_desa,
   COUNTIF(
     e.resolved_desa_norm IS NOT NULL
     AND (
