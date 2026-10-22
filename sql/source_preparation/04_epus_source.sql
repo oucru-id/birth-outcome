@@ -844,6 +844,59 @@ finalized AS (
     ) AS epus_source_record_key
 
   FROM normalized n
+),
+
+
+-- ============================================================
+-- 6A. ENRICH RESIDENTIAL VILLAGE FROM CLEAN EPUS LPP
+-- One row per valid NIK; multiple villages held for review.
+-- Desa is informational only, not used in event/identity keys.
+-- ============================================================
+lpp_desa_per_nik AS (
+  SELECT
+    nik_clean,
+    COUNT(DISTINCT desa_norm) AS distinct_desa,
+    IF(
+      COUNT(DISTINCT desa_norm) = 1,
+      MAX(desa_norm),
+      NULL
+    ) AS desa_lpp
+  FROM (
+    SELECT
+      nik_clean,
+      NULLIF(
+        TRIM(REGEXP_REPLACE(
+          UPPER(NORMALIZE(kelurahan_clean, NFKC)),
+          r'\s+', ' '
+        )),
+        ''
+      ) AS desa_norm
+    FROM `spheres-lombok-barat.matneo_clean.clean_epus_laporan_pelayanan_pasien_update`
+    WHERE REGEXP_CONTAINS(nik_clean, r'^\d{16}$')
+      AND nik_clean NOT IN (
+        '0000000000000000',
+        '9999999999999999'
+      )
+  )
+  GROUP BY nik_clean
+),
+
+
+finalized_with_desa AS (
+  SELECT
+    f.*,
+    l.desa_lpp AS desa,
+    l.desa_lpp AS desa_norm,
+    CASE
+      WHEN f.nik_clean IS NULL THEN 'MISSING_NIK'
+      WHEN l.nik_clean IS NULL THEN 'NOT_FOUND_IN_LPP'
+      WHEN l.distinct_desa = 0 THEN 'NO_DESA_IN_LPP'
+      WHEN l.distinct_desa = 1 THEN 'MATCHED_BY_NIK'
+      ELSE 'MULTIPLE_DESA_REVIEW'
+    END AS desa_match_status
+  FROM finalized f
+  LEFT JOIN lpp_desa_per_nik l
+    ON f.nik_clean = l.nik_clean
 )
 
 
@@ -944,6 +997,10 @@ SELECT
   alamat,
 
   no_hp_raw,
-  no_hp_clean
+  no_hp_clean,
 
-FROM finalized;
+  desa,
+  desa_norm,
+  desa_match_status
+
+FROM finalized_with_desa;
