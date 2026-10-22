@@ -98,7 +98,7 @@ SELECT
     WHEN s.pregnancy_episode_id IS NULL THEN 'MISSING_BASELINE_EPISODE'
     WHEN b.membership_signature IS DISTINCT FROM s.membership_signature
       THEN 'CHANGED_MEMBERSHIP'
-    WHEN b.desa_norm IS NOT NULL
+    WHEN (b.desa_norm IS NOT NULL OR b.desa IS NOT NULL)
       AND (
         b.desa_norm IS DISTINCT FROM s.desa_norm
         OR b.desa IS DISTINCT FROM s.desa
@@ -146,7 +146,8 @@ WITH counts AS (
       AS unchanged_episodes,
     COUNTIF(
       baseline_id IS NOT NULL AND staging_id IS NOT NULL
-      AND baseline_desa_norm IS NOT NULL AND staging_desa_norm IS NULL
+      AND (baseline_desa_norm IS NOT NULL OR baseline_desa IS NOT NULL)
+      AND staging_desa_norm IS NULL AND staging_desa IS NULL
     ) AS desa_lost
   FROM staging_spine_compare
 )
@@ -207,8 +208,8 @@ SELECT
 FROM baseline_map b
 FULL OUTER JOIN staging_map s
   ON b.source_system = s.source_system AND b.member_id = s.member_id
-GROUP BY source_system
-ORDER BY source_system;
+GROUP BY 1
+ORDER BY 1;
 
 -- Result 3: Up to 100 affected pregnancy episode IDs, for human review.
 SELECT
