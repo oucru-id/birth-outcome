@@ -4,8 +4,7 @@
 -- ePUSKESMAS PREGNANCY MASTER
 --
 -- Output:
---   spheres-lombok-barat.kohort_bumil_v2
---   .t_epus_pregnancy_master
+--   spheres-lombok-barat.kohort_bumil_v3.t_epus_pregnancy_master
 --
 -- Grain:
 --   ONE ROW = ONE MOTHER + ONE PREGNANCY
@@ -144,6 +143,53 @@ episode_core AS (
     epus_mother_key
 ),
 
+
+-- ============================================================
+-- 2A. RESOLVE EPISODE-LEVEL VILLAGE FROM SOURCE-RECORD LPP
+--
+-- Keep one row per pregnancy. Desa is informational only:
+-- it is NEVER used for identity matching or episode assignment.
+-- Refuse to resolve if distinct villages or source conflicts exist.
+-- ============================================================
+village_summary AS (
+  SELECT
+    epus_pregnancy_key,
+    COUNTIF(desa_norm IS NOT NULL) AS desa_source_record_count,
+    COUNT(DISTINCT desa_norm) AS desa_distinct_count,
+    COUNTIF(desa_match_status = 'MULTIPLE_DESA_REVIEW')
+      AS desa_conflict_record_count,
+
+    CASE
+      WHEN COUNT(DISTINCT desa_norm) = 1
+       AND COUNTIF(desa_match_status = 'MULTIPLE_DESA_REVIEW') = 0
+      THEN MAX(desa)
+      ELSE NULL
+    END AS desa,
+
+    CASE
+      WHEN COUNT(DISTINCT desa_norm) = 1
+       AND COUNTIF(desa_match_status = 'MULTIPLE_DESA_REVIEW') = 0
+      THEN MAX(desa_norm)
+      ELSE NULL
+    END AS desa_norm,
+
+    CASE
+      WHEN COUNT(DISTINCT desa_norm) > 1
+        OR COUNTIF(desa_match_status = 'MULTIPLE_DESA_REVIEW') > 0
+      THEN 'MULTIPLE_DESA_REVIEW'
+      WHEN COUNT(DISTINCT desa_norm) = 1
+      THEN 'MATCHED_BY_NIK'
+      WHEN COUNTIF(desa_match_status = 'NO_DESA_IN_LPP') > 0
+      THEN 'NO_DESA_IN_LPP'
+      WHEN COUNTIF(desa_match_status = 'NOT_FOUND_IN_LPP') > 0
+      THEN 'NOT_FOUND_IN_LPP'
+      WHEN COUNTIF(desa_match_status = 'MISSING_NIK') > 0
+      THEN 'MISSING_NIK'
+      ELSE 'NO_DESA'
+    END AS desa_match_status
+  FROM pr
+  GROUP BY epus_pregnancy_key
+),
 
 -- ============================================================
 -- 3. BEST IDENTITY RECORD PER PREGNANCY
@@ -1031,6 +1077,15 @@ master_pre AS (
     i.mother_match_method,
     i.mother_match_confidence,
 
+    -- Episode-level desa from ePus LPP (not facility location)
+    v.desa,
+    v.desa_norm,
+    v.desa_match_status,
+    IF(v.desa IS NOT NULL, 'EPUS_LPP_BY_NIK', NULL) AS desa_source,
+    v.desa_source_record_count,
+    v.desa_distinct_count,
+    v.desa_conflict_record_count,
+
 
     -- ========================================================
     -- FACILITY
@@ -1466,6 +1521,9 @@ master_pre AS (
 
   FROM episode_core e
 
+
+  LEFT JOIN village_summary v
+    USING (epus_pregnancy_key)
 
   LEFT JOIN identity_best i
     USING (epus_pregnancy_key)
