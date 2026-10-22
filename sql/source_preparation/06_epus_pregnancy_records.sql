@@ -25,6 +25,11 @@
 --
 -- All those rows receive the same epus_pregnancy_key.
 --
+-- Village enrichment propagation (from clean EPUS LPP):
+-- t_epus_source_records -> t_epus_mother_records -> this table.
+-- desa, desa_norm and desa_match_status remain RECORD-level attributes.
+-- They are not used to assign pregnancies or generate stable episode keys.
+--
 -- ============================================================
 
 CREATE OR REPLACE TABLE
@@ -58,6 +63,8 @@ WITH
 -- ============================================================
 base AS (
   SELECT
+    -- Includes desa, desa_norm and desa_match_status unchanged.
+    -- No village field is used by any pregnancy assignment condition.
     m.*,
 
 
@@ -1219,6 +1226,7 @@ episode_numbered AS (
 -- ============================================================
 assigned_records AS (
   SELECT
+    -- Propagate the source-record village along with the assigned pregnancy.
     b.*,
 
 
@@ -1291,6 +1299,7 @@ assigned_records AS (
 -- ============================================================
 final AS (
   SELECT
+    -- Preserve the record-level village and its conflict/review status.
     a.*,
 
 
