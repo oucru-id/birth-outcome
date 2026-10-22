@@ -259,6 +259,23 @@ parsed AS (
       )
     ) AS desa_norm,
 
+    -- Residential village provenance and review metadata.
+    -- Additive only; never used in episode ID or matching rules.
+    NULLIF(JSON_VALUE(j, '$.desa_match_status'), '')
+      AS desa_match_status,
+
+    NULLIF(JSON_VALUE(j, '$.desa_source'), '')
+      AS desa_source,
+
+    SAFE_CAST(JSON_VALUE(j, '$.desa_source_record_count') AS INT64)
+      AS desa_source_record_count,
+
+    SAFE_CAST(JSON_VALUE(j, '$.desa_distinct_count') AS INT64)
+      AS desa_distinct_count,
+
+    SAFE_CAST(JSON_VALUE(j, '$.desa_conflict_record_count') AS INT64)
+      AS desa_conflict_record_count,
+
     COALESCE(
       NULLIF(JSON_VALUE(j, '$.posyandu'), ''),
       NULLIF(JSON_VALUE(j, '$.posyandu_domisili'), '')
@@ -370,6 +387,11 @@ SELECT
   puskesmas_norm,
   desa,
   desa_norm,
+  desa_match_status,
+  desa_source,
+  desa_source_record_count,
+  desa_distinct_count,
+  desa_conflict_record_count,
   posyandu,
   alamat,
 
