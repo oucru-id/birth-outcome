@@ -26,6 +26,8 @@
 --   6. Source-specific weak identity
 --
 -- HPHT/HPL are intentionally NOT used for mother identity.
+-- Residential desa, desa_norm and desa_match_status are passed through
+-- from t_epus_source_records, not used for mother identity matching.
 -- ============================================================
 
 
@@ -49,6 +51,8 @@ WITH
 -- ============================================================
 source AS (
   SELECT
+    -- Includes desa, desa_norm, desa_match_status from enriched source.
+    -- These fields do not contribute to resolved_nik or epus_mother_key.
     s.*,
 
     -- --------------------------------------------------------
@@ -620,6 +624,7 @@ mother_summary AS (
 -- ============================================================
 final AS (
   SELECT
+    -- Retain record-level village and QA status unchanged.
     m.*,
 
     s.mother_source_record_count,
