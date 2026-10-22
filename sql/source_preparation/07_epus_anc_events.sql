@@ -4,11 +4,12 @@
 -- CANONICAL ePUSKESMAS ANC EVENTS - UPDATED
 --
 -- Output:
---   spheres-lombok-barat.kohort_bumil_v2
---   .t_epus_anc_canonical_events
+--   spheres-lombok-barat.kohort_bumil_v3.t_epus_anc_canonical_events
 --
 -- Grain:
 --   one row = one canonical real-world ANC encounter
+-- Village metadata from LPP is informational; it does not influence
+-- ANC event grouping, canonical event key or pregnancy matching.
 --
 -- Sources:
 --   EPUS_ANC
@@ -340,6 +341,50 @@ canonical_event_raw AS (
 
 
     -- --------------------------------------------------------
+    -- Residential village from LPP (NOT visit facility).
+    -- Aggregate strictly inside canonical ANC event groups.
+    -- Never allow village to affect ANC deduplication keys.
+    -- --------------------------------------------------------
+    COUNTIF(desa_norm IS NOT NULL)
+      AS desa_source_record_count,
+
+    COUNT(DISTINCT desa_norm)
+      AS desa_distinct_count,
+
+    COUNTIF(desa_match_status = 'MULTIPLE_DESA_REVIEW')
+      AS desa_conflict_record_count,
+
+    CASE
+      WHEN COUNT(DISTINCT desa_norm) = 1
+       AND COUNTIF(desa_match_status = 'MULTIPLE_DESA_REVIEW') = 0
+      THEN MAX(desa)
+      ELSE NULL
+    END AS desa,
+
+    CASE
+      WHEN COUNT(DISTINCT desa_norm) = 1
+       AND COUNTIF(desa_match_status = 'MULTIPLE_DESA_REVIEW') = 0
+      THEN MAX(desa_norm)
+      ELSE NULL
+    END AS desa_norm,
+
+    CASE
+      WHEN COUNT(DISTINCT desa_norm) > 1
+        OR COUNTIF(desa_match_status = 'MULTIPLE_DESA_REVIEW') > 0
+      THEN 'MULTIPLE_DESA_REVIEW'
+      WHEN COUNT(DISTINCT desa_norm) = 1
+      THEN 'MATCHED_BY_NIK'
+      WHEN COUNTIF(desa_match_status = 'NO_DESA_IN_LPP') > 0
+      THEN 'NO_DESA_IN_LPP'
+      WHEN COUNTIF(desa_match_status = 'NOT_FOUND_IN_LPP') > 0
+      THEN 'NOT_FOUND_IN_LPP'
+      WHEN COUNTIF(desa_match_status = 'MISSING_NIK') > 0
+      THEN 'MISSING_NIK'
+      ELSE 'NO_DESA'
+    END AS desa_match_status,
+
+
+    -- --------------------------------------------------------
     -- Same-date context
     -- --------------------------------------------------------
     MAX(
@@ -654,6 +699,19 @@ final AS (
       c.best_source.puskesmas_id,
       c.best_facility.puskesmas_id
     ) AS puskesmas_id,
+
+
+    -- --------------------------------------------------------
+    -- Village and provenance diagnostics; do not change
+    -- identity, ANC deduplication, or pregnancy episode.
+    -- --------------------------------------------------------
+    c.desa,
+    c.desa_norm,
+    c.desa_match_status,
+    IF(c.desa IS NOT NULL, 'EPUS_LPP_BY_NIK', NULL) AS desa_source,
+    c.desa_source_record_count,
+    c.desa_distinct_count,
+    c.desa_conflict_record_count,
 
 
     -- --------------------------------------------------------
